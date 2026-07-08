@@ -85,7 +85,7 @@ Suggested gallery order:
 - Categories: `Utility`, `Adventure`
 - Required dependencies: `Fabric API`, `Cobblemon`, `Cloth Config`
 - Optional dependency: `Mod Menu`
-- Client side: `Required`
+- Client side: `Optional`
 - Server side: `Required`
 - License: `MIT`
 
@@ -102,6 +102,13 @@ Suggested version metadata:
 - Release channel: `Release`
 - Game version: `1.21.1`
 - Loader: `Fabric`
+
+Suggested environment:
+
+- Choose `Client and server`
+- Then choose `Optional on client`
+
+The mod should be installed on the server to send alerts in multiplayer. Installing it on the client is useful for singleplayer/integrated-server worlds and for the Mod Menu configuration screen.
 
 Suggested changelog:
 
