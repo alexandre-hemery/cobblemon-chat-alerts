@@ -46,6 +46,15 @@ Cobblemon Chat Alerts is a small Fabric companion mod for Cobblemon. It adds con
 - IV-based rarity filters are disabled by default.
 - This is an unofficial companion mod and is not affiliated with Cobblemon's developers.
 
+## Gallery Assets
+
+Suggested gallery order for Modrinth:
+
+1. `docs/images/chat-alerts.png` - `Chat alerts in game`
+2. `docs/images/config-alerts.png` - `Alerts configuration`
+3. `docs/images/config-rarity-filters.png` - `Rarity and IV filters`
+4. `docs/images/config-rare-spawns.png` - `Rare spawn range and details`
+
 ## Recommended Modrinth Metadata
 
 - Project title: `Cobblemon Chat Alerts`
@@ -55,6 +64,6 @@ Cobblemon Chat Alerts is a small Fabric companion mod for Cobblemon. It adds con
 - Categories: `Utility`, `Adventure`
 - Required dependencies: `Fabric API`, `Cobblemon`, `Cloth Config`
 - Optional dependency: `Mod Menu`
-- Issue tracker: GitHub Issues, once the repository is created
-- Source code: GitHub repository, once created
+- Issue tracker: `https://github.com/alexandre-hemery/cobblemon-chat-alerts/issues`
+- Source code: `https://github.com/alexandre-hemery/cobblemon-chat-alerts`
 - License: MIT

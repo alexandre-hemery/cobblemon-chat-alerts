@@ -15,6 +15,37 @@ This is an unofficial companion mod and is not affiliated with Cobblemon's devel
 - English and French localization.
 - JSON config file plus Mod Menu support through Cloth Config.
 
+## Screenshots
+
+These screenshots show the current 0.1.2 UI in English.
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/images/chat-alerts.png" alt="Chat alerts in game">
+      <br>
+      <sub>Chat alerts in game.</sub>
+    </td>
+    <td width="50%">
+      <img src="docs/images/config-alerts.png" alt="Alerts configuration">
+      <br>
+      <sub>Alert toggles in Mod Menu.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/images/config-rarity-filters.png" alt="Rarity filters configuration">
+      <br>
+      <sub>Rarity and IV filters.</sub>
+    </td>
+    <td width="50%">
+      <img src="docs/images/config-rare-spawns.png" alt="Rare spawns configuration">
+      <br>
+      <sub>Range and spawn detail settings.</sub>
+    </td>
+  </tr>
+</table>
+
 ## Requirements
 
 - Minecraft 1.21.1
