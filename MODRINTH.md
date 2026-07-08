@@ -1,5 +1,7 @@
 # Cobblemon Chat Alerts
 
+Copy-paste-ready page draft: [`modrinth/MODRINTH_PAGE_DRAFT.md`](modrinth/MODRINTH_PAGE_DRAFT.md)
+
 Cobblemon Chat Alerts is a small Fabric companion mod for Cobblemon. It adds configurable chat notifications for important Pokemon events, so players can notice rare spawns, Pokedex progress, evolutions, and level milestones without adding a heavy UI overlay.
 
 ## Features
