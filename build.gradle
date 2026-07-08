@@ -1,0 +1,82 @@
+plugins {
+    id 'fabric-loom' version '1.15.5'
+    id 'maven-publish'
+}
+
+version = "${project.mod_version}+mc${project.minecraft_version}-fabric"
+group = project.mod_group_id
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    maven {
+        name = 'Fabric'
+        url = 'https://maven.fabricmc.net'
+    }
+    maven {
+        name = 'Modrinth'
+        url = 'https://api.modrinth.com/maven'
+        content {
+            includeGroup 'maven.modrinth'
+        }
+    }
+    maven {
+        name = 'TerraformersMC'
+        url = 'https://maven.terraformersmc.com/releases'
+    }
+    maven {
+        name = 'Shedaniel'
+        url = 'https://maven.shedaniel.me'
+    }
+    mavenCentral()
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${project.fabric_loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    modImplementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
+    modImplementation "maven.modrinth:cobblemon:${project.cobblemon_modrinth_version_id}"
+    modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+    modCompileOnly "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
+}
+
+processResources {
+    inputs.property 'version', project.version
+    inputs.property 'minecraft_version', project.minecraft_version
+    inputs.property 'fabric_loader_version', project.fabric_loader_version
+    inputs.property 'fabric_api_version', project.fabric_api_version
+    inputs.property 'cobblemon_version', project.cobblemon_version
+
+    filesMatching('fabric.mod.json') {
+        expand(
+                version: project.version,
+                minecraft_version: project.minecraft_version,
+                fabric_loader_version: project.fabric_loader_version,
+                fabric_api_version: project.fabric_api_version,
+                cobblemon_version: project.cobblemon_version
+        )
+    }
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            artifactId = project.archives_base_name
+            from components.java
+        }
+    }
+}

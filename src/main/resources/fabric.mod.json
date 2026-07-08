@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "cobblemon_chat_alerts",
+  "version": "${version}",
+  "name": "Cobblemon Chat Alerts",
+  "description": "Local chat notifications for notable Cobblemon events.",
+  "authors": [
+    "Alexandre Hemery"
+  ],
+  "license": "MIT",
+  "icon": "assets/cobblemon_chat_alerts/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.alexandrehemery.cobblemonchatalerts.CobblemonChatAlerts"
+    ],
+    "modmenu": [
+      "dev.alexandrehemery.cobblemonchatalerts.CobblemonChatAlertsModMenu"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=${fabric_loader_version}",
+    "fabric-api": ">=${fabric_api_version}",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=21",
+    "cobblemon": ">=${cobblemon_version}",
+    "cloth-config": ">=15.0.140"
+  },
+  "suggests": {
+    "modmenu": "*"
+  }
+}
