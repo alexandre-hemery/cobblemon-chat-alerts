@@ -2,6 +2,7 @@
 build/
 run/
 out/
+output/
 
 .DS_Store
 *.log

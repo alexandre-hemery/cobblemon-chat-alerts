@@ -4,6 +4,13 @@ Fabric 1.21.1 companion mod for Cobblemon that adds configurable chat notificati
 
 This is an unofficial companion mod and is not affiliated with Cobblemon's developers.
 
+## Status
+
+- Latest release: `0.1.2+mc1.21.1-fabric`
+- GitHub release: [v0.1.2](https://github.com/alexandre-hemery/cobblemon-chat-alerts/releases/tag/v0.1.2)
+- Modrinth: submitted for review on 2026-07-08.
+- Issue tracker: [GitHub Issues](https://github.com/alexandre-hemery/cobblemon-chat-alerts/issues)
+
 ## Features
 
 - Rare wild Pokemon spawn alerts.
@@ -54,6 +61,12 @@ These screenshots show the current 0.1.2 UI in English.
 - Cobblemon 1.7.3 for Fabric
 - Cloth Config
 - Mod Menu is optional, but recommended for in-game configuration.
+
+## Installation
+
+Download the Fabric jar from the latest GitHub release, then place it in the `mods` folder with the required dependencies.
+
+For multiplayer servers, install the mod on the server so it can detect Cobblemon events and send chat alerts. Client installation is optional for receiving chat alerts, but useful for singleplayer worlds and for the Mod Menu configuration screen.
 
 ## Configuration
 
