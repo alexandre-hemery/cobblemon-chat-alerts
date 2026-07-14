@@ -71,10 +71,6 @@ public final class CobblemonChatAlertsModMenu implements ModMenuApi {
                 .setDefaultValue(true)
                 .setSaveConsumer(value -> config.rareFilterRestricted = value)
                 .build());
-        rareFilters.addEntry(entries.startBooleanToggle(text("config.rare_filter_sublegendary"), config.rareFilterSublegendary)
-                .setDefaultValue(true)
-                .setSaveConsumer(value -> config.rareFilterSublegendary = value)
-                .build());
         rareFilters.addEntry(entries.startBooleanToggle(text("config.rare_filter_ultra_beast"), config.rareFilterUltraBeast)
                 .setDefaultValue(true)
                 .setSaveConsumer(value -> config.rareFilterUltraBeast = value)

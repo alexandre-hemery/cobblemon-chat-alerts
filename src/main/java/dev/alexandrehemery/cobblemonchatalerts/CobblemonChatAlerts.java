@@ -2,6 +2,7 @@ package dev.alexandrehemery.cobblemonchatalerts;
 
 import com.cobblemon.mod.common.api.battles.model.PokemonBattle;
 import com.cobblemon.mod.common.api.battles.model.actor.ActorType;
+import com.cobblemon.mod.common.api.Priority;
 import com.cobblemon.mod.common.api.events.CobblemonEvents;
 import com.cobblemon.mod.common.api.events.battles.BattleFaintedEvent;
 import com.cobblemon.mod.common.api.events.entity.SpawnEvent;
@@ -11,6 +12,7 @@ import com.cobblemon.mod.common.api.events.pokemon.PokemonCapturedEvent;
 import com.cobblemon.mod.common.api.events.pokemon.evolution.EvolutionCompleteEvent;
 import com.cobblemon.mod.common.api.events.pokemon.evolution.EvolutionTestedEvent;
 import com.cobblemon.mod.common.api.pokedex.PokedexEntryProgress;
+import com.cobblemon.mod.common.api.pokedex.SpeciesDexRecord;
 import com.cobblemon.mod.common.battles.pokemon.BattlePokemon;
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import com.cobblemon.mod.common.pokemon.IVs;
@@ -18,6 +20,7 @@ import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.pokemon.Species;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -36,29 +39,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class CobblemonChatAlerts implements ModInitializer {
     public static final String MOD_ID = "cobblemon_chat_alerts";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     private static final long EVOLUTION_READY_COOLDOWN_MS = 60_000L;
-    private static final Set<String> RARE_LABELS = Set.of(
-            "legendary",
-            "mythical",
-            "restricted",
-            "sublegendary",
-            "ultra_beast",
-            "ultra-beast",
-            "ultrabeast"
-    );
     private static final Map<UUID, Long> EVOLUTION_READY_NOTIFIED_AT = new ConcurrentHashMap<>();
+    private static final Queue<PokemonEntity> PENDING_SPAWN_ALERTS = new ConcurrentLinkedQueue<>();
+    private static final Set<PokedexProgressChange> PENDING_POKEDEX_PROGRESS = ConcurrentHashMap.newKeySet();
 
     private static MinecraftServer currentServer;
 
@@ -72,15 +68,19 @@ public class CobblemonChatAlerts implements ModInitializer {
                 currentServer = null;
             }
             EVOLUTION_READY_NOTIFIED_AT.clear();
+            PENDING_SPAWN_ALERTS.clear();
+            PENDING_POKEDEX_PROGRESS.clear();
         });
+        ServerTickEvents.END_SERVER_TICK.register(CobblemonChatAlerts::flushPendingSpawnAlerts);
 
-        CobblemonEvents.POKEMON_ENTITY_SPAWN.subscribe(CobblemonChatAlerts::onPokemonSpawn);
+        CobblemonEvents.POKEMON_ENTITY_SPAWN.subscribe(Priority.LOWEST, CobblemonChatAlerts::onPokemonSpawn);
         CobblemonEvents.POKEMON_CAPTURED.subscribe(CobblemonChatAlerts::onPokemonCaptured);
         CobblemonEvents.BATTLE_FAINTED.subscribe(CobblemonChatAlerts::onBattleFainted);
-        CobblemonEvents.LEVEL_UP_EVENT.subscribe(CobblemonChatAlerts::onLevelUp);
-        CobblemonEvents.EVOLUTION_TESTED.subscribe(CobblemonChatAlerts::onEvolutionTested);
+        CobblemonEvents.LEVEL_UP_EVENT.subscribe(Priority.LOWEST, CobblemonChatAlerts::onLevelUp);
+        CobblemonEvents.EVOLUTION_TESTED.subscribe(Priority.LOWEST, CobblemonChatAlerts::onEvolutionTested);
         CobblemonEvents.EVOLUTION_COMPLETE.subscribe(CobblemonChatAlerts::onEvolutionComplete);
-        CobblemonEvents.POKEDEX_DATA_CHANGED_POST.subscribe(CobblemonChatAlerts::onPokedexDataChanged);
+        CobblemonEvents.POKEDEX_DATA_CHANGED_PRE.subscribe(Priority.LOWEST, CobblemonChatAlerts::onPokedexDataChanging);
+        CobblemonEvents.POKEDEX_DATA_CHANGED_POST.subscribe(Priority.LOWEST, CobblemonChatAlerts::onPokedexDataChanged);
     }
 
     private static void onPokemonSpawn(SpawnEvent<PokemonEntity> event) {
@@ -100,8 +100,38 @@ public class CobblemonChatAlerts implements ModInitializer {
             return;
         }
 
-        Level level = entity.level();
-        if (!(level instanceof ServerLevel serverLevel)) {
+        PENDING_SPAWN_ALERTS.add(entity);
+    }
+
+    private static void flushPendingSpawnAlerts(MinecraftServer server) {
+        if (server != currentServer) {
+            PENDING_SPAWN_ALERTS.clear();
+            return;
+        }
+
+        PokemonEntity entity;
+        while ((entity = PENDING_SPAWN_ALERTS.poll()) != null) {
+            Level level = entity.level();
+            if (entity.isRemoved() || !(level instanceof ServerLevel serverLevel)) {
+                continue;
+            }
+            if (serverLevel.getEntity(entity.getUUID()) != entity) {
+                continue;
+            }
+
+            sendRareSpawnAlert(entity, serverLevel);
+        }
+    }
+
+    private static void sendRareSpawnAlert(PokemonEntity entity, ServerLevel serverLevel) {
+        CobblemonChatAlertsConfig.Config config = CobblemonChatAlertsConfig.get();
+        Pokemon pokemon = entity.getPokemon();
+        if (!config.alertRareSpawns || pokemon.getOwnerUUID() != null) {
+            return;
+        }
+
+        List<Component> rareReasons = rareReasons(pokemon, config);
+        if (rareReasons.isEmpty()) {
             return;
         }
 
@@ -184,22 +214,23 @@ public class CobblemonChatAlerts implements ModInitializer {
         Pokemon pokemon = event.getPokemon();
         UUID uuid = pokemon.getUuid();
         long now = System.currentTimeMillis();
-        Long lastNotification = EVOLUTION_READY_NOTIFIED_AT.get(uuid);
-        if (lastNotification != null && now - lastNotification < EVOLUTION_READY_COOLDOWN_MS) {
+        EVOLUTION_READY_NOTIFIED_AT.entrySet().removeIf(entry -> now - entry.getValue() >= EVOLUTION_READY_COOLDOWN_MS);
+        if (EVOLUTION_READY_NOTIFIED_AT.putIfAbsent(uuid, now) != null) {
             return;
         }
 
-        EVOLUTION_READY_NOTIFIED_AT.put(uuid, now);
         sendToOwner(pokemon, alert("evolution_ready", ChatFormatting.GREEN, pokemonName(pokemon)));
     }
 
     private static void onEvolutionComplete(EvolutionCompleteEvent event) {
+        Pokemon evolvedPokemon = event.getPokemon();
+        EVOLUTION_READY_NOTIFIED_AT.remove(evolvedPokemon.getUuid());
+
         CobblemonChatAlertsConfig.Config config = CobblemonChatAlertsConfig.get();
         if (!config.alertEvolutionComplete) {
             return;
         }
 
-        Pokemon evolvedPokemon = event.getPokemon();
         Pokemon sourcePokemon = event.getSourcePokemon();
 
         sendToOwner(evolvedPokemon, alert(
@@ -210,7 +241,27 @@ public class CobblemonChatAlerts implements ModInitializer {
         ));
     }
 
+    private static void onPokedexDataChanging(PokedexDataChangedEvent.Pre event) {
+        CobblemonChatAlertsConfig.Config config = CobblemonChatAlertsConfig.get();
+        if (!config.alertPokedex) {
+            return;
+        }
+
+        SpeciesDexRecord speciesRecord = event.getRecord().getSpeciesDexRecord();
+        if (!PokedexProgressEvaluation.isUpgrade(speciesRecord.getKnowledge(), event.getKnowledge())) {
+            return;
+        }
+
+        PENDING_POKEDEX_PROGRESS.add(new PokedexProgressChange(event.getPlayerUUID(), speciesRecord, event.getKnowledge()));
+    }
+
     private static void onPokedexDataChanged(PokedexDataChangedEvent.Post event) {
+        SpeciesDexRecord speciesRecord = event.getRecord().getSpeciesDexRecord();
+        PokedexProgressChange progressChange = new PokedexProgressChange(event.getPlayerUUID(), speciesRecord, event.getKnowledge());
+        if (!PENDING_POKEDEX_PROGRESS.remove(progressChange)) {
+            return;
+        }
+
         CobblemonChatAlertsConfig.Config config = CobblemonChatAlertsConfig.get();
         if (!config.alertPokedex) {
             return;
@@ -280,67 +331,38 @@ public class CobblemonChatAlerts implements ModInitializer {
     }
 
     private static List<Component> rareReasons(Pokemon pokemon, CobblemonChatAlertsConfig.Config config) {
+        int ivTotal = pokemon.getIvs().getEffectiveBattleTotal();
+        RarityEvaluation.Filters filters = new RarityEvaluation.Filters(
+                config.rareFilterShiny,
+                config.rareFilterLegendary,
+                config.rareFilterMythical,
+                config.rareFilterRestricted,
+                config.rareFilterUltraBeast,
+                config.rareFilterPerfectIvs,
+                config.rareFilterHighIvs,
+                config.highIvThresholdPercent
+        );
+        List<RarityEvaluation.Reason> evaluatedReasons = RarityEvaluation.evaluate(
+                pokemon.getShiny(),
+                pokemon.isLegendary(),
+                pokemon.isMythical(),
+                pokemon.hasLabels("restricted"),
+                pokemon.isUltraBeast(),
+                ivTotal,
+                IVs.MAX_TOTAL,
+                filters
+        );
+
         List<Component> reasons = new ArrayList<>();
-        if (pokemon.getShiny() && config.rareFilterShiny) {
-            reasons.add(reason("shiny"));
-        }
-
-        Species species = pokemon.getSpecies();
-        if (species != null) {
-            Set<String> labels = species.getLabels();
-            if (labels != null && !labels.isEmpty()) {
-                Set<String> normalizedLabels = new LinkedHashSet<>();
-                for (String label : labels) {
-                    normalizedLabels.add(label.toLowerCase(Locale.ROOT));
-                }
-
-                Set<String> rareLabelKeys = new LinkedHashSet<>();
-                for (String label : normalizedLabels) {
-                    String key = labelKey(label);
-                    if (RARE_LABELS.contains(label) && isRareLabelEnabled(key, config)) {
-                        rareLabelKeys.add(key);
-                    }
-                }
-
-                for (String key : rareLabelKeys) {
-                    reasons.add(reason(key));
-                }
+        for (RarityEvaluation.Reason evaluatedReason : evaluatedReasons) {
+            if (evaluatedReason == RarityEvaluation.Reason.HIGH_IVS) {
+                reasons.add(reason(evaluatedReason.translationKey(), config.highIvThresholdPercent));
+            } else {
+                reasons.add(reason(evaluatedReason.translationKey()));
             }
         }
 
-        addIvReasons(pokemon, config, reasons);
         return reasons;
-    }
-
-    private static boolean isRareLabelEnabled(String key, CobblemonChatAlertsConfig.Config config) {
-        return switch (key) {
-            case "legendary" -> config.rareFilterLegendary;
-            case "mythical" -> config.rareFilterMythical;
-            case "restricted" -> config.rareFilterRestricted;
-            case "sublegendary" -> config.rareFilterSublegendary;
-            case "ultra_beast" -> config.rareFilterUltraBeast;
-            default -> true;
-        };
-    }
-
-    private static void addIvReasons(Pokemon pokemon, CobblemonChatAlertsConfig.Config config, List<Component> reasons) {
-        if (!config.rareFilterPerfectIvs && !config.rareFilterHighIvs) {
-            return;
-        }
-
-        int total = pokemon.getIvs().getEffectiveBattleTotal();
-        if (config.rareFilterPerfectIvs && total == IVs.MAX_TOTAL) {
-            reasons.add(reason("perfect_ivs"));
-            return;
-        }
-
-        if (config.rareFilterHighIvs && isAtLeastIvPercent(total, config.highIvThresholdPercent)) {
-            reasons.add(reason("high_ivs", config.highIvThresholdPercent));
-        }
-    }
-
-    private static boolean isAtLeastIvPercent(int total, int thresholdPercent) {
-        return total * 100 >= thresholdPercent * IVs.MAX_TOTAL;
     }
 
     private static Component pokemonName(Pokemon pokemon) {
@@ -352,13 +374,6 @@ public class CobblemonChatAlerts implements ModInitializer {
             return Component.translatable("label." + MOD_ID + ".pokemon").withStyle(ChatFormatting.AQUA);
         }
         return species.getTranslatedName().withStyle(ChatFormatting.AQUA);
-    }
-
-    private static String labelKey(String label) {
-        return switch (label) {
-            case "ultra_beast", "ultra-beast", "ultrabeast" -> "ultra_beast";
-            default -> label;
-        };
     }
 
     private static MutableComponent reason(String key, Object... args) {
@@ -437,5 +452,8 @@ public class CobblemonChatAlerts implements ModInitializer {
 
     private static MutableComponent prefix() {
         return Component.literal("[Cobblemon] ").withStyle(ChatFormatting.DARK_AQUA);
+    }
+
+    private record PokedexProgressChange(UUID playerId, SpeciesDexRecord speciesRecord, PokedexEntryProgress knowledge) {
     }
 }

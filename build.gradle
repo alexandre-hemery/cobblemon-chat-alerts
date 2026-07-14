@@ -42,23 +42,23 @@ dependencies {
     modImplementation "maven.modrinth:cobblemon:${project.cobblemon_modrinth_version_id}"
     modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
     modCompileOnly "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
+    testImplementation "org.junit.jupiter:junit-jupiter:${project.junit_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${project.junit_platform_version}"
 }
 
+def resourceProperties = [
+        version              : project.version.toString(),
+        minecraft_version    : project.minecraft_version.toString(),
+        fabric_loader_version: project.fabric_loader_version.toString(),
+        fabric_api_version   : project.fabric_api_version.toString(),
+        cobblemon_version     : project.cobblemon_version.toString()
+]
+
 processResources {
-    inputs.property 'version', project.version
-    inputs.property 'minecraft_version', project.minecraft_version
-    inputs.property 'fabric_loader_version', project.fabric_loader_version
-    inputs.property 'fabric_api_version', project.fabric_api_version
-    inputs.property 'cobblemon_version', project.cobblemon_version
+    inputs.properties resourceProperties
 
     filesMatching('fabric.mod.json') {
-        expand(
-                version: project.version,
-                minecraft_version: project.minecraft_version,
-                fabric_loader_version: project.fabric_loader_version,
-                fabric_api_version: project.fabric_api_version,
-                cobblemon_version: project.cobblemon_version
-        )
+        expand resourceProperties
     }
 }
 
@@ -70,6 +70,18 @@ java {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release = 21
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+def licenseArchiveName = "LICENSE_${project.archives_base_name}"
+tasks.withType(Jar).configureEach {
+    from('LICENSE') {
+        into 'META-INF'
+        rename { licenseArchiveName }
+    }
 }
 
 publishing {

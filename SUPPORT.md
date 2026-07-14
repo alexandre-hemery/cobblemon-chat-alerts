@@ -13,4 +13,6 @@ Please include the following information when reporting an issue:
 
 For gameplay issues, please describe the event that should have triggered an alert and what actually happened.
 
+For singleplayer configuration issues, provide the config from the local game instance. For dedicated servers, provide the server's own config file: client-side Mod Menu settings are not synchronized to a remote server.
+
 If the project is published on GitHub, please use the bug report template so the issue has enough context to reproduce.

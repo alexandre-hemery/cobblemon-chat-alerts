@@ -76,7 +76,6 @@ public final class CobblemonChatAlertsConfig {
         public boolean rareFilterLegendary = true;
         public boolean rareFilterMythical = true;
         public boolean rareFilterRestricted = true;
-        public boolean rareFilterSublegendary = true;
         public boolean rareFilterUltraBeast = true;
         public boolean rareFilterPerfectIvs = false;
         public boolean rareFilterHighIvs = false;
