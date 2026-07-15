@@ -3,6 +3,7 @@ build/
 run/
 out/
 output/
+design/icon-options/
 
 .DS_Store
 *.log
